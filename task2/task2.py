@@ -8,19 +8,19 @@ classes = 2
 samples_per_mode = 100
 class DataGenerator():
 
-    df = 0 
-    
+    df = 0
+
     lr = 0.1
-    
+
     weights = np.random.rand(2,1)
     bias = np.random.rand(1,1)
     activation_func_str = 'sigmoid'
     func_dict = {
         'sigmoid' : lambda x : 1/(1+np.exp(-x)),
         'heavyside' : lambda x : np.heaviside(x,1/2),
-        'sin' : lambda x : np.sin(x),
-        'tanh' : lambda x : np.tanh(x),
-        'sign' : lambda x : np.sign(x),
+        'sin' : lambda x : (np.sin(x)+1)/2,
+        'tanh' : lambda x : (np.tanh(x)+1)/2,
+        'sign' : lambda x : (np.sign(x)+1)/2,
         'ReLu' : lambda x : x * (x>0),
         'lReLu' : lambda x : np.where(x > 0, x , x * 0.01)
     }
@@ -36,10 +36,10 @@ class DataGenerator():
 
     def activation_func(self,x):
         return self.func_dict[self.activation_func_str](x)
-    
+
     def deriv_activation_func(self,x):
         return self.derivs[self.activation_func_str](x)
-    
+
     def forward_prop(self):
         inputs = self.df[["x","y"]].to_numpy()
 
@@ -52,22 +52,24 @@ class DataGenerator():
 
         inputs = self.df[["x","y"]].to_numpy()
         classes = self.df[["class"]].to_numpy()
-        
+        n = classes.shape[0]
         prediction = self.forward_prop()
 
         prediction_delta = prediction - classes
-        #weight_change = self.lr*(prediction_delta)*(self.deriv_activation_func(inputs@self.weights))
-        weight_change = self.lr*(prediction_delta)*(self.deriv_activation_func(inputs@self.weights+self.bias))
-        self.weights -= inputs.T@weight_change
-        # self.bias -= np.mean(prediction_delta)
+        weight_change = self.lr*(prediction_delta)*(self.deriv_activation_func(inputs@self.weights))
+        #weight_change = self.lr*(prediction_delta)*(self.deriv_activation_func(inputs@self.weights+self.bias))
+        self.weights -= 1/n*inputs.T@weight_change
+
+        #[[]]
+        #self.bias -= 1/n*np.sum(prediction_delta)
 
     def train(self):
         classes = self.df[["class"]].to_numpy()
-        for e in range(50):
+        for e in range(100):
             self.back_prop()
             if e%10==0:
                 print(f"cost at {e}",np.mean(np.abs(classes - self.forward_prop())))
-        
+
         print("final cost",np.mean(np.abs(classes - self.forward_prop())))
     def generate(self):
         data = np.zeros((0,3))
@@ -86,11 +88,11 @@ class DataGenerator():
 
                 rand_data_x = np.random.normal(loc=centre_x[mode_i],scale=scale_x[mode_i],size=samples_per_mode)
                 rand_data_y = np.random.normal(loc=centre_y[mode_i],scale=scale_y[mode_i],size=samples_per_mode)
-                
+
                 partial_data = np.array([rand_data_x,rand_data_y,np.repeat(_class,samples_per_mode)]).T
                 colors = np.hstack([colors,np.repeat(color_hex,samples_per_mode)])
                 data = np.vstack([data,partial_data])
-                
+
         colors = colors.reshape((classes*modes_per_class*samples_per_mode,1))
         self.df = pd.DataFrame(data,columns=["x","y","class"])
         self.df.insert(3,"colors",colors)
@@ -114,8 +116,8 @@ y = np.linspace(-1.5,1.5,20)
 
 X,Y = np.meshgrid(x,y)
 
-#decision_map = dg.activation_func(dg.weights[0,0]*X + dg.weights[1,0]*Y)
-decision_map = dg.activation_func(dg.weights[0,0]*X + dg.weights[1,0]*Y+dg.bias)
+decision_map = dg.activation_func(dg.weights[0,0]*X + dg.weights[1,0]*Y)
+#decision_map = dg.activation_func(dg.weights[0,0]*X + dg.weights[1,0]*Y+dg.bias)
 
 
 x1 = dg.df["x"].iloc[0:modes_per_class*samples_per_mode]
