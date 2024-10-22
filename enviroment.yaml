@@ -1,9 +1,0 @@
-name: aif
-channels:
-  - conda-forge
-  - defaults
-dependencies:
-  - streamlit
-  - numpy
-  - plotly
-
